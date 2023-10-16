@@ -115,7 +115,7 @@ class Model:
             raise ValueError("Variable no admitida")
         
         # Ver si el valor a asignar es información nueva
-        if self.__dict__[name] == value:
+        if name in self.__dict__ and self.__dict__[name] == value:
             raise ValueError("Variable ya asignada, solo se puede enviar información nueva a la BBDD")
 
         # Asigna el valor value a la variable name
@@ -162,10 +162,9 @@ class Model:
             ModelCursor
                 cursor de modelos
         """ 
-        #TODO
-        return ModelCursor(cls,cls.db.find(filter))
+
         # cls es el puntero a la clase
-        pass #No olvidar eliminar esta linea una vez implementado
+        return ModelCursor(cls,cls.db.find(filter))
 
     @classmethod
     def aggregate(cls, pipeline: list[dict]) -> pymongo.command_cursor.CommandCursor:
@@ -266,16 +265,9 @@ class ModelCursor:
         Utilizar la funcion next para obtener el siguiente documento del cursor
         Utilizar alive para comprobar si existen mas documentos.
         """
-        #TODO
         
-        # Ejemplo de uso de yield
-        yield self.model(**next(self.cursor))
-        
-        # Ejemplo de uso de alive
-        if self.cursor.alive:
-            print("Existen mas documentos")
-            
-
+        while self.cursor.alive:
+            yield next(self.cursor)
 
 def initApp(definitions_path: str = "./models.yml", mongodb_uri="mongodb://localhost:27017/", db_name="abd") -> None:
     """ 
@@ -358,10 +350,16 @@ if __name__ == '__main__':
     modelo.telefono = "+34 650292929"
     # Guardar
     modelo.save()
+    
     # Buscar nuevo documento con find
-
+    cursor = iter(modelo.find({"nombre": "Jaime"}))
+    
     # Obtener primer documento
 
+    print(next(cursor))
+    print(next(cursor))
+    print(next(cursor))
+    
     # Modificar valor de variable admitida
 
     # Guardar
