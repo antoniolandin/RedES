@@ -163,6 +163,7 @@ class Model:
                 cursor de modelos
         """ 
         #TODO
+        return ModelCursor(cls,cls.db.find(filter))
         # cls es el puntero a la clase
         pass #No olvidar eliminar esta linea una vez implementado
 
