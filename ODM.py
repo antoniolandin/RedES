@@ -266,7 +266,14 @@ class ModelCursor:
         Utilizar alive para comprobar si existen mas documentos.
         """
         #TODO
-        pass #No olvidar eliminar esta linea una vez implementado
+        
+        # Ejemplo de uso de yield
+        yield self.model(**next(self.cursor))
+        
+        # Ejemplo de uso de alive
+        if self.cursor.alive:
+            print("Existen mas documentos")
+            
 
 
 def initApp(definitions_path: str = "./models.yml", mongodb_uri="mongodb://localhost:27017/", db_name="abd") -> None:
@@ -329,26 +336,27 @@ if __name__ == '__main__':
     # Inicializar base de datos y modelos con initApp
     initApp()
 
-    #Ejemplo
-    m = MiModelo(nombre="Pablo", apellido="Ramos", edad=17)
-    m.save()
-    
-    m.delete()
-
     # Hacer pruebas para comprobar que funciona correctamente el modelo
     #TODO
     # Crear modelo
+    modelo = MiModelo(nombre="Alberto", apellido="Gutierrez", edad="27")
 
     # Asignar nuevo valor a variable admitida del objeto 
+    modelo.nombre = "Jaime"
 
     # Asignar nuevo valor a variable no admitida del objeto 
-
+    try:
+        modelo.peso = 80
+    except ValueError as e:
+        print(e)
+        
     # Guardar
-
+    modelo.save()
+    
     # Asignar nuevo valor a variable admitida del objeto
-
+    modelo.telefono = "+34 650292929"
     # Guardar
-
+    modelo.save()
     # Buscar nuevo documento con find
 
     # Obtener primer documento
