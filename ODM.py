@@ -144,8 +144,7 @@ class Model:
         """
         Elimina el modelo de la base de datos
         """
-        #TODO
-        pass
+        self.db.delete_one(self.__dict__)
     
     @classmethod
     def find(cls, filter: dict[str, str | dict]) -> Any:
@@ -308,7 +307,6 @@ def initApp(definitions_path: str = "./models.yml", mongodb_uri="mongodb://local
     # Ignorar el warning de Pylance sobre MiModelo, es incapaz de detectar
     # que se ha declarado la clase en la linea anterior ya que se hace
     # en tiempo de ejecucion.
-    # MiModelo.init_class(db_collection=None, required_vars=None, admissible_vars=None)
 
 # TODO 
 # Almacenar los pipelines de las consultas en Q1, Q2, etc. 
@@ -334,8 +332,8 @@ if __name__ == '__main__':
     #Ejemplo
     m = MiModelo(nombre="Pablo", apellido="Ramos", edad=17)
     m.save()
-    m.nombre="Pedro"
-    print(m.nombre)
+    
+    m.delete()
 
     # Hacer pruebas para comprobar que funciona correctamente el modelo
     #TODO
