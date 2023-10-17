@@ -365,7 +365,7 @@ if __name__ == '__main__':
 
     #Creamos nuevo modelo
 
-    modelo2 = Persona(nombre="Alberto", apellido="Gutierrez", edad="27",dni = "12345678X", telefono = 686291092, direccion = "", universidad = "UPM", descripcion= "Big Data", trabajos = "", estudios = [{"carrera": "MAIS", "fin": 2020}])
+
 
     # Ejecutar consultas Q1, Q2, etc. y mostrarlo
     #TODO
