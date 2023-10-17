@@ -310,7 +310,7 @@ def initApp(definitions_path: str = "./models.yml", mongodb_uri="mongodb://local
 # Almacenar los pipelines de las consultas en Q1, Q2, etc. 
 # EJEMPLO
 # Q1: Listado de todas las personas con nombre determinado
-nombre = "Julio"
+nombre = "Quijote"
 Q1 = [{'$match': {'nombre': nombre}}]
 
 # Q2: 
@@ -370,7 +370,7 @@ if __name__ == '__main__':
 
     # Ejecutar consultas Q1, Q2, etc. y mostrarlo
 
-    # Para las consultas usaremos un nuevo modelo
+    # Primero vamos a cargar nuestros documentos del archivo MiModelo.json
     
     documentos = []
     
@@ -378,10 +378,10 @@ if __name__ == '__main__':
     
     for modelo in json.load(archivo_json):
         documentos.append(Persona(**modelo))
-        documentos[-1].save()
+        documentos[-1].save()   # Guardamos cada documento en la base de datos
         
-    #Ejemplo
-    #Q1_r = MiModelo.aggregate(Q1)
+    Q1_r = Persona.aggregate(Q1)
+    print(f"Comando: {Q1_r.try_next()}")
 
 
 
