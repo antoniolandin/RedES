@@ -100,7 +100,8 @@ class Model:
         
         # Asigna todos los valores en kwargs a las variables con 
         # nombre las claves en kwargs
-        self.__dict__.update(kwargs)
+        for name, value in kwargs.items():
+            setattr(self, name, value)          
 
     def __setattr__(self, name: str, value: str | dict) -> None:
         """ Sobreescribe el metodo de asignacion de valores a las 
@@ -118,6 +119,10 @@ class Model:
         # Ver si el valor a asignar es información nueva
         if name in self.__dict__ and self.__dict__[name] == value:
             raise ValueError("Variable ya asignada, solo se puede enviar información nueva a la BBDD")
+
+        if name == "direccion" and type(value) == str: # Si la direccion nos viene dada como string, la convertimos en un punto
+            self.__dict__[name] = getLocationPoint(value)
+            return
 
         # Asigna el valor value a la variable name
         self.__dict__[name] = value
@@ -306,20 +311,28 @@ def initApp(definitions_path: str = "./models.yml", mongodb_uri="mongodb://local
     # que se ha declarado la clase en la linea anterior ya que se hace
     # en tiempo de ejecucion.
 
-# TODO 
 # Almacenar los pipelines de las consultas en Q1, Q2, etc. 
-# EJEMPLO
-# Q1: Listado de todas las personas con nombre determinado
-nombre = "Quijote"
-Q1 = [{'$match': {'nombre': nombre}}]
 
-# Q2: 
-Q2 = []
+# Q1: Listado de todas personas que han estudiado en la UPM o UAM
+Q1 = [{'$match': {'$or' : [{'universidad': "UPM"}, {'universidad':"UAM"}]}}]
 
-# Q3:
-Q3 = []
+# Q2: Listado  de  las  diferentes  universidades  en  las  que  han  estudiado  las  personas  residentes en Madrid
+Q2 = [{'$match': {'ciudad': 'Madrid'}},{'$project': {'_id':0,'universidad': 1}}]
 
-# Q4: etc.
+# Q3: Personas que, en la descripción de su perfil, incluye los términos “Big Data” o “Ingeligencia Artificial”
+Q3 = [{'$match' : {'$or': [{'descripcion': "Big Data"},{'descripcion': "Inteligencia Artificial"}]}}]
+
+# Q4: Guarda  en  una  tabla  nueva  el  listado  de  las  personas  que  ha  terminado  alguno  de  sus  estudios en el 2017 o después
+Q4 = [{'$match': {"estudios.fin": {'$gte': 2017}}}, {'$out':"estudiosFin"}]
+
+# Q5: Calcular  el  número  medio  de  estudios  realizados  por  las  personas  que  han  trabajado  o  trabajan en la Microsoft
+Q5 = []
+
+# Q6: Distancia media al trabajo (distancia geodésica) de los actuales trabajadores de Google. Se pueden indicar las coordenadas de la oficina de Google manualmente
+Q6 = []
+
+# Q7: Listado de las tres universidades que más veces aparece como centro de estudios de las personas registradas. Mostrar universidad y el número de veces que aparece
+Q7 = []
 
 if __name__ == '__main__':
     
@@ -327,14 +340,16 @@ if __name__ == '__main__':
     initApp()
 
     # Hacer pruebas para comprobar que funciona correctamente el modelo
-    #TODO
+
     # Crear modelo
     modelo = MiModelo(nombre="Alberto", apellido="Gutierrez", edad="27")
 
     # Asignar nuevo valor a variable admitida del objeto 
-    modelo.direccion = getLocationPoint("Calle de la Reina, 28004 Madrid")
+    modelo.direccion = "Calle de la Reina, 28004 Madrid"
 
     # Asignar nuevo valor a variable no admitida del objeto 
+    print("Asignar nuevo valor a variable no admitida del objeto:")
+    
     try:
         modelo.peso = 80
     except ValueError as e:
@@ -355,7 +370,7 @@ if __name__ == '__main__':
     # Obtener primer documento
 
     primer_documento = next(cursor)
-    print(f"Obtener primer documento:\nTipo:{type(primer_documento)}\nValor_nombre: {primer_documento.nombre}")    
+    print(f"\nObtener primer documento:\nTipo:{type(primer_documento)}\nValor_nombre: {primer_documento.nombre}")    
     # Modificar valor de variable admitida
     
     modelo.dni = "12345678A"
@@ -368,19 +383,47 @@ if __name__ == '__main__':
 
     # Ejecutar consultas Q1, Q2, etc. y mostrarlo
 
-    # Primero vamos a cargar nuestros documentos del archivo MiModelo.json
+    # Primero vamos a cargar nuestros documentos del archivo data.json
+    
+    print("\nCargando documentos desde data.json...")
     
     documentos = []
     
-    archivo_json = open('MiModelo.json')
+    archivo_json = open('data.json')
     
     for modelo in json.load(archivo_json):
         documentos.append(Persona(**modelo))
         documentos[-1].save()   # Guardamos cada documento en la base de datos
-        
-    Q1_r = Persona.aggregate(Q1)
-    print(f"Comando: {Q1_r.try_next()}")
+    
+    archivo_json.close()
+    
+    print("Documentos cargados correctamente")
+    
+    # Ahora ejecutamos las consultas
+    
+    consultas = [Q1, Q2, Q3, Q4, Q5, Q6, Q7]
 
+    # Ejecutamos los comandos y mostramos los resultados
+    
+    print("\nComandos:")
+    
+    for consulta in consultas:
+        
+        print(f"\nQ{consultas.index(consulta) + 1}:")
+        
+        print(f"Comando: {consulta}")
+        print("Resultados: ")
+        
+        Qr = Persona.aggregate(consulta)
+        
+        numero_resultados = 0
+        
+        for resultado in Qr:
+            print(resultado)
+            numero_resultados += 1
+            
+        print(f"Total: {numero_resultados} resultados")
+    
 
 
 
