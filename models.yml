@@ -17,6 +17,7 @@ MiOtroModelo:
     - dni
     - direccion
     - telefono
+    
 Persona:
   required_vars:
     - nombre
@@ -25,9 +26,8 @@ Persona:
     - dni
     - telefono
     - direccion
-    admissible_vars:
+  admissible_vars:
     - universidad
     - descripcion
     - estudios
     - trabajos
-    
