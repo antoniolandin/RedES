@@ -7,6 +7,7 @@ from typing import Generator, Any
 from geojson import Point
 import pymongo
 import yaml
+import json
 
 def getLocationPoint(address: str) -> Point:
     """ 
@@ -368,7 +369,17 @@ if __name__ == '__main__':
 
 
     # Ejecutar consultas Q1, Q2, etc. y mostrarlo
-    #TODO
+
+    # Para las consultas usaremos un nuevo modelo
+    
+    documentos = []
+    
+    archivo_json = open('MiModelo.json')
+    
+    for modelo in json.load(archivo_json):
+        documentos.append(Persona(**modelo))
+        documentos[-1].save()
+        
     #Ejemplo
     #Q1_r = MiModelo.aggregate(Q1)
 
