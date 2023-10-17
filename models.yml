@@ -26,6 +26,7 @@ Persona:
     - dni
     - telefono
     - direccion
+    - ciudad
   admissible_vars:
     - universidad
     - descripcion

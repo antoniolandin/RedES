@@ -6,10 +6,11 @@
         "dni": "57843376D",
         "telefono": 745617769,
         "direccion": "Passeig Catalunya, 70",
+        "ciudad": "Girona",
         "universidad": "UPM",
         "descripcion": "Big Data",
-        "trabajos": "Nvidia",
-        "estudios":[{"carrera": "MAIS", "fin": 2020}]
+        "trabajos": ["Nvidia", "MSI"],
+        "estudios":[{"carrera": "MAIS", "fin": 2019},{"carrera": "Videojuegos", "fin": 2022}]
     },
     {
         "nombre": "Mirian",
@@ -17,11 +18,12 @@
         "edad": 35,
         "dni": "06368015M",
         "telefono": 699962095,
-        "direccion": "",
+        "direccion": "Travessera Iglesia, 42",
+        "ciudad": "Ourense",
         "universidad": "U-Tad",
         "descripcion": "Artes",
-        "trabajos": "Intel",
-        "estudios":[{"carrera": "MAIS", "fin": 2020}]
+        "trabajos": ["Zara"],
+        "estudios":[{"carrera": "DIDI", "fin": 2015},{"carrera": "Animacion", "fin": 2016}]
     },
     {
         "nombre": "Gonzalo",
@@ -30,10 +32,11 @@
         "dni": "06368015M",
         "telefono": 627556085,
         "direccion": "Cuesta Iglesia, 58",
+        "ciudad": "Madrid",
         "universidad": "UAM",
         "descripcion": "Física cuantica",
-        "trabajos": "Intel",
-        "estudios":[{"carrera": "FIIS", "fin": 2018}]
+        "trabajos": ["Intel", "Google", "McDonalds"],
+        "estudios":[{"carrera": "FIIS", "fin": 2016},{"carrera": "INSO", "fin": 2022}]
     },
     {
         "nombre": "Carla",
@@ -41,10 +44,10 @@
         "edad": 35,
         "dni": "75174618S",
         "telefono": 693883361,
-        "direccion": "Rambla Horno, 53",
-        "universidad": "",
+        "direccion": "Estrada Mayor, 20",
+        "ciudad": "Barcelona",
         "descripcion": "Inteligencia Artificial",
-        "trabajos": "Microsoft",
+        "trabajos": ["Microsoft", "Iberdrola", "Orange"],
         "estudios":[{"carrera": "INSO", "fin": 2016}]
     },
     {
@@ -54,22 +57,22 @@
         "dni": "12342226N",
         "telefono": 601267842,
         "direccion": "Cuesta De España, 11",
+        "ciudad": "Madrid",
         "universidad": "UPM",
         "descripcion": "Artes",
-        "trabajos": "",
         "estudios":[{"carrera": "DIDI", "fin": 2023}]
     },
     {
         "nombre": "Elias",
         "apellido": "Cebrian",
-        "edad": 24,
+        "edad": 26,
         "dni": "81334683J",
         "telefono": 685356047,
         "direccion": "Alameda Nueva, 29",
+        "ciudad": "Madrid",
         "universidad": "U-Tad",
         "descripcion": "Big Data",
-        "trabajos": "",
-        "estudios":[{"carrera": "MAIS", "fin": 2020}]
+        "estudios":[{"carrera": "MAIS", "fin": 2019},{"carrera": "Ciberseguridad", "fin": 2023}]
     },
     {
         "nombre": "Petra",
@@ -77,10 +80,11 @@
         "edad": 30,
         "dni": "17368160D",
         "telefono": 714648146,
-        "direccion": "Parque Iglesia, 21",
+        "direccion": "Parque Horno, 82",
+        "ciudad": "Tarragona",
         "universidad": "Carlos III",
         "descripcion": "Inteligencia Artificial",
-        "trabajos": "Google",
+        "trabajos": ["Google", "Vodafone"],
         "estudios":[{"carrera": "MAIS", "fin": 2015 }]
     },
     {
@@ -89,11 +93,11 @@
         "edad": 34,
         "dni": "01369877C",
         "telefono": 756263588,
-        "direccion": "Travessera Iglesia, 48",
-        "universidad": "",
+        "direccion": "Paseo Real, 91",
+        "ciudad": "Ávila",
         "descripcion": "Big Data",
-        "trabajos": "Google",
-        "estudios":[{"carrera": "MAIS", "fin": 2010}]
+        "trabajos": ["Google", "Movistar"],
+        "estudios":[{"carrera": "MAIS", "fin": 2011},{"carrera": "INSO", "fin": 2017}]
     },
     {
         "nombre": "Guillem",
@@ -101,10 +105,11 @@
         "edad": 25,
         "dni": "15057526R",
         "telefono": 703888466,
-        "direccion": "Passeig Pedralbes, 51",
+        "direccion": "Placeta Pedralbes, 56",
+        "ciudad": "Teruel",
         "universidad": "Carlos III",
         "descripcion": "Diseño y Publicidad",
-        "trabajos": "Microsoft",
+        "trabajos": ["Microsoft", "Profesor"],
         "estudios":[{"carrera": "DIDI", "fin": 2021}]
     },
     {
@@ -113,10 +118,10 @@
         "edad": 31,
         "dni": "62853490X",
         "telefono": 710650073,
-        "direccion": "Ronda Mayor, 27",
+        "direccion": "Calleja Real, 16",
+        "ciudad": "Zamora",
         "universidad": "U-Tad",
         "descripcion": "Inteligencia Artificial",
-        "trabajos": "",
-        "estudios":[{"carrera": "INSO", "fin": 2016}]
+        "estudios":[{"carrera": "INSO", "fin": 2016}, {"carrera": "FIIS", "fin": 2020}]
     }
 ]
