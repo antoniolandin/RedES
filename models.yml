@@ -7,7 +7,7 @@ MiModelo:
     - dni
     - direccion
     - telefono
-    - _id
+    
 MiOtroModelo:
   required_vars:
     - nombre

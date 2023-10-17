@@ -132,7 +132,7 @@ class Model:
             
         if self.__dict__.get("_id"):    # Si existe el id, se actualiza
             self.db.update_one({"_id": self._id}, {"$set": self.__dict__})
-        else:
+        else:   # Si no existe, se inserta creando un id nuevo en el proceso
             self.db.insert_one(self.__dict__)
        
                 
@@ -331,7 +331,7 @@ if __name__ == '__main__':
     modelo = MiModelo(nombre="Alberto", apellido="Gutierrez", edad="27")
 
     # Asignar nuevo valor a variable admitida del objeto 
-    modelo.nombre = "Jaime"
+    modelo.direccion = getLocationPoint("Calle de la Reina, 28004 Madrid")
 
     # Asignar nuevo valor a variable no admitida del objeto 
     try:
@@ -349,12 +349,12 @@ if __name__ == '__main__':
     modelo.save()
     
     # Buscar nuevo documento con find
-    cursor = iter(modelo.find({"nombre": "Jaime"}))
+    cursor = iter(modelo.find({"nombre": "Alberto"}))
     
     # Obtener primer documento
 
-    # primer_documento = next(cursor)
-    
+    primer_documento = next(cursor)
+    print(f"Obtener primer documento:\nTipo:{type(primer_documento)}\nValor_nombre: {primer_documento.nombre}")    
     # Modificar valor de variable admitida
     
     modelo.dni = "12345678A"
