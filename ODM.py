@@ -309,7 +309,7 @@ def initApp(definitions_path: str = "./models.yml", mongodb_uri="mongodb://local
 # Almacenar los pipelines de las consultas en Q1, Q2, etc. 
 # EJEMPLO
 # Q1: Listado de todas las personas con nombre determinado
-nombre = "Quijote"
+nombre = "Julio"
 Q1 = [{'$match': {'nombre': nombre}}]
 
 # Q2: 
@@ -362,6 +362,10 @@ if __name__ == '__main__':
     # Guardar
     
     modelo.save()
+
+    #Creamos nuevo modelo
+
+    modelo2 = Persona(nombre="Alberto", apellido="Gutierrez", edad="27",dni = "12345678X", telefono = 686291092, direccion = "", universidad = "UPM", descripcion= "Big Data", trabajos = "", estudios = [{"carrera": "MAIS", "fin": 2020}])
 
     # Ejecutar consultas Q1, Q2, etc. y mostrarlo
     #TODO
