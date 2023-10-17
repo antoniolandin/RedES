@@ -366,8 +366,6 @@ if __name__ == '__main__':
 
     #Creamos nuevo modelo
 
-
-
     # Ejecutar consultas Q1, Q2, etc. y mostrarlo
 
     # Primero vamos a cargar nuestros documentos del archivo MiModelo.json
