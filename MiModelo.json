@@ -1,0 +1,14 @@
+[
+    {
+        "nombre": "Julio",
+        "apellido": "Gutierrez",
+        "edad": 20,
+        "dni": "12345678X",
+        "telefono": 686291092,
+        "direccion": "",
+        "universidad": "UPM",
+        "descripcion": "Big Data",
+        "trabajos": "",
+        "estudios":[{"carrera": "MAIS", "fin": 2020}]
+    }
+]

@@ -17,3 +17,17 @@ MiOtroModelo:
     - dni
     - direccion
     - telefono
+Persona:
+  required_vars:
+    - nombre
+    - apellido
+    - edad
+    - dni
+    - telefono
+    - direccion
+    admissible_vars:
+    - universidad
+    - descripcion
+    - estudios
+    - trabajos
+    
