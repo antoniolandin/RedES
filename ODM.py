@@ -129,17 +129,13 @@ class Model:
         actualiza el documento existente con los nuevos valores del
         modelo.
         """
-        #TODO
-        
-        # Comprobar si el modelo existe en la base de datos
-        documento = self.db.find_one(self.__dict__)
-        
-        if documento:
-            print("EXISTE") #Si existe, actualizar
-        else:
-            self.db.insert_one(self.__dict__) #Si no existe, insertar
-            print("NO EXISTE")
             
+        if self.__dict__.get("_id"):    # Si existe el id, se actualiza
+            self.db.update_one({"_id": self._id}, {"$set": self.__dict__})
+        else:
+            self.db.insert_one(self.__dict__)
+       
+                
     def delete(self) -> None:
         """
         Elimina el modelo de la base de datos
@@ -164,7 +160,7 @@ class Model:
         """ 
 
         # cls es el puntero a la clase
-        return ModelCursor(cls,cls.db.find(filter))
+        return ModelCursor(cls, cls.db.find(filter))
 
     @classmethod
     def aggregate(cls, pipeline: list[dict]) -> pymongo.command_cursor.CommandCursor:
@@ -267,7 +263,8 @@ class ModelCursor:
         """
         
         while self.cursor.alive:
-            yield next(self.cursor)
+            siguiente = next(self.cursor)
+            yield self.model(**siguiente)
 
 def initApp(definitions_path: str = "./models.yml", mongodb_uri="mongodb://localhost:27017/", db_name="abd") -> None:
     """ 
@@ -323,7 +320,6 @@ Q3 = []
 
 # Q4: etc.
 
-
 if __name__ == '__main__':
     
     # Inicializar base de datos y modelos con initApp
@@ -348,6 +344,7 @@ if __name__ == '__main__':
     
     # Asignar nuevo valor a variable admitida del objeto
     modelo.telefono = "+34 650292929"
+    
     # Guardar
     modelo.save()
     
@@ -356,13 +353,15 @@ if __name__ == '__main__':
     
     # Obtener primer documento
 
-    print(next(cursor))
-    print(next(cursor))
-    print(next(cursor))
+    # primer_documento = next(cursor)
     
     # Modificar valor de variable admitida
+    
+    modelo.dni = "12345678A"
 
     # Guardar
+    
+    modelo.save()
 
     # Ejecutar consultas Q1, Q2, etc. y mostrarlo
     #TODO
