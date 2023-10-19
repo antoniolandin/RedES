@@ -326,13 +326,13 @@ Q3 = [{'$match' : {'$or': [{'descripcion': "Big Data"},{'descripcion': "Intelige
 Q4 = [{'$match': {"estudios.fin": {'$gte': 2017}}}, {'$out':"estudiosFin"}]
 
 # Q5: Calcular  el  número  medio  de  estudios  realizados  por  las  personas  que  han  trabajado  o  trabajan en la Microsoft
-Q5 = []
+Q5 = [{'$match': {'trabajos': "Microsoft"}}, {'$group': {'_id': "", 'promedio': {'$avg': {'$sum': {'$size': "$estudios"}}}}}]
 
 # Q6: Distancia media al trabajo (distancia geodésica) de los actuales trabajadores de Google. Se pueden indicar las coordenadas de la oficina de Google manualmente
-Q6 = []
+Q6 = [{'$geoNear': {'near': { 'type': "Point", 'coordinates': [ 40.4165 ,  -3.7026] },  'distanceField': "dist.calculated"}},{'$match': {'trabajos': "Google"}}, {'$group': {'_id': "",'distancia_media': {'$avg': {'$sum': "$dist.calculated"}}}}, {'$project':{'_id':0}}]
 
 # Q7: Listado de las tres universidades que más veces aparece como centro de estudios de las personas registradas. Mostrar universidad y el número de veces que aparece
-Q7 = []
+Q7 = [{'$match': {"universidad" :{ "$ne" : 'null' } } }, {"$group" : {'_id': "$universidad", 'count' :{'$sum':1}}},{'$sort': {'count': -1}},{'$limit':3}]
 
 if __name__ == '__main__':
     
@@ -407,6 +407,8 @@ if __name__ == '__main__':
     
     print("\nComandos:")
     
+    Persona.db.create_index([('direccion', pymongo.GEOSPHERE)])    # Creamos el indice geoespacial para la consulta Q6 (si no lo creamos, la consulta no puede calcular la distancia)
+      
     for consulta in consultas:
         
         print(f"\nQ{consultas.index(consulta) + 1}:")
