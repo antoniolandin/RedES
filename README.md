@@ -1,2 +1,3 @@
-# practica-pymongo
-Práctica 1 de Ampliación de Base de Datos 
+# Práctica Bases de Datos
+
+Práctica de la asignatura de Bases de Datos que se va actualizando cada vez que hacemos una práctica de un tema nuevo
