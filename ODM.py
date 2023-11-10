@@ -8,6 +8,7 @@ from geojson import Point
 import pymongo
 import yaml
 import json
+import redis
 
 def getLocationPoint(address: str) -> Point:
     """ 
@@ -96,6 +97,7 @@ class Model:
         # Realizar las comprabociones y gestiones necesarias
         # antes de la asignacion.
         if not all(name in kwargs for name in self.required_vars):
+            print(kwargs, self.required_vars)
             raise ValueError("Faltan variables requeridas")
         
         # Asigna todos los valores en kwargs a las variables con 
@@ -310,32 +312,32 @@ def initApp(definitions_path: str = "./models.yml", mongodb_uri="mongodb://local
     # Ignorar el warning de Pylance sobre MiModelo, es incapaz de detectar
     # que se ha declarado la clase en la linea anterior ya que se hace
     # en tiempo de ejecucion.
-
-# Almacenar los pipelines de las consultas en Q1, Q2, etc. 
-
-# Q1: Listado de todas personas que han estudiado en la UPM o UAM
-Q1 = [{'$match': {'$or' : [{'universidad': "UPM"}, {'universidad':"UAM"}]}}]
-
-# Q2: Listado  de  las  diferentes  universidades  en  las  que  han  estudiado  las  personas  residentes en Madrid
-Q2 = [{'$match': {'ciudad': 'Madrid'}},{'$project': {'_id':0,'universidad': 1}}]
-
-# Q3: Personas que, en la descripción de su perfil, incluye los términos “Big Data” o “Ingeligencia Artificial”
-Q3 = [{'$match' : {'$or': [{'descripcion': "Big Data"},{'descripcion': "Inteligencia Artificial"}]}}]
-
-# Q4: Guarda  en  una  tabla  nueva  el  listado  de  las  personas  que  ha  terminado  alguno  de  sus  estudios en el 2017 o después
-Q4 = [{'$match': {"estudios.fin": {'$gte': 2017}}}, {'$out':"estudiosFin"}]
-
-# Q5: Calcular  el  número  medio  de  estudios  realizados  por  las  personas  que  han  trabajado  o  trabajan en la Microsoft
-Q5 = [{'$match': {'trabajos': "Microsoft"}}, {'$group': {'_id': "", 'promedio': {'$avg': {'$sum': {'$size': "$estudios"}}}}}]
-
-# Q6: Distancia media al trabajo (distancia geodésica) de los actuales trabajadores de Google. Se pueden indicar las coordenadas de la oficina de Google manualmente
-Q6 = [{'$geoNear': {'near': { 'type': "Point", 'coordinates': [ 40.4165 ,  -3.7026] },  'distanceField': "dist.calculated"}},{'$match': {'trabajos': "Google"}}, {'$group': {'_id': "",'distancia_media': {'$avg': {'$sum': "$dist.calculated"}}}}, {'$project':{'_id':0}}]
-
-# Q7: Listado de las tres universidades que más veces aparece como centro de estudios de las personas registradas. Mostrar universidad y el número de veces que aparece
-Q7 = [{'$match': {"universidad" :{ "$ne" : 'null' } } }, {"$group" : {'_id': "$universidad", 'count' :{'$sum':1}}},{'$sort': {'count': -1}},{'$limit':3}]
-
-if __name__ == '__main__':
     
+def practica_1():
+    # Almacenar los pipelines de las consultas en Q1, Q2, etc. 
+
+    # Q1: Listado de todas personas que han estudiado en la UPM o UAM
+    Q1 = [{'$match': {'$or' : [{'universidad': "UPM"}, {'universidad':"UAM"}]}}]
+
+    # Q2: Listado  de  las  diferentes  universidades  en  las  que  han  estudiado  las  personas  residentes en Madrid
+    Q2 = [{'$match': {'ciudad': 'Madrid'}},{'$project': {'_id':0,'universidad': 1}}]
+
+    # Q3: Personas que, en la descripción de su perfil, incluye los términos “Big Data” o “Ingeligencia Artificial”
+    Q3 = [{'$match' : {'$or': [{'descripcion': "Big Data"},{'descripcion': "Inteligencia Artificial"}]}}]
+
+    # Q4: Guarda  en  una  tabla  nueva  el  listado  de  las  personas  que  ha  terminado  alguno  de  sus  estudios en el 2017 o después
+    Q4 = [{'$match': {"estudios.fin": {'$gte': 2017}}}, {'$out':"estudiosFin"}]
+
+    # Q5: Calcular  el  número  medio  de  estudios  realizados  por  las  personas  que  han  trabajado  o  trabajan en la Microsoft
+    Q5 = [{'$match': {'trabajos': "Microsoft"}}, {'$group': {'_id': "", 'promedio': {'$avg': {'$sum': {'$size': "$estudios"}}}}}]
+
+    # Q6: Distancia media al trabajo (distancia geodésica) de los actuales trabajadores de Google. Se pueden indicar las coordenadas de la oficina de Google manualmente
+    Q6 = [{'$geoNear': {'near': { 'type': "Point", 'coordinates': [ 40.4165 ,  -3.7026] },  'distanceField': "dist.calculated"}},{'$match': {'trabajos': "Google"}}, {'$group': {'_id': "",'distancia_media': {'$avg': {'$sum': "$dist.calculated"}}}}, {'$project':{'_id':0}}]
+
+    # Q7: Listado de las tres universidades que más veces aparece como centro de estudios de las personas registradas. Mostrar universidad y el número de veces que aparece
+    Q7 = [{'$match': {"universidad" :{ "$ne" : 'null' } } }, {"$group" : {'_id': "$universidad", 'count' :{'$sum':1}}},{'$sort': {'count': -1}},{'$limit':3}]
+
+        
     # Inicializar base de datos y modelos con initApp
     initApp()
 
@@ -403,6 +405,7 @@ if __name__ == '__main__':
     
     consultas = [Q1, Q2, Q3, Q4, Q5, Q6, Q7]
 
+
     # Ejecutamos los comandos y mostramos los resultados
     
     print("\nComandos:")
@@ -427,6 +430,11 @@ if __name__ == '__main__':
         print(f"Total: {numero_resultados} resultados")
     
 
+if __name__ == "__main__":
+    
+    initApp()
+    
+    usuarios = Usuarios(nombre_completo="Alejandro Gómez", nombre_usuario="naranjas",contraseña="1234",privilegios="admin")
+    usuarios.save()
 
-
-
+    
