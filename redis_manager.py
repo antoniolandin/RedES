@@ -1,34 +1,68 @@
 import redis
+import uuid
+import pickle
 
-class redisManager():
+class RedisManager():
     def __init__(self):
-        self.default_user = redis.Redis(host='localhost', port=6379, db=0)
+        self.db = redis.Redis(host='localhost', port=6379, db=0)
+        self.logged = False
         
-        self.user_connection = None
-        
-    def login(self, nombre_usuario, contraseña):
-        if nombre_usuario in self.default_user.acl_users():
-            creds_provider = redis.UsernamePasswordCredentialProvider(nombre_usuario, contraseña)
-            self.user_connection = redis.Redis(host="localhost", port=6379, credential_provider=creds_provider)
-            
-            print(self.user_connection.set("prueba", "hola"))
-            
-        else:
-            print("El usuario no existe") 
-        
-    def register(self, nombre_completo, nombre_usuario, contraseña, privilegios):
-        
-        # Verifica si el usuario ya existe
-
-        if nombre_usuario in self.default_user.acl_users():
+    def register(self, nombre_usuario, nombre_completo, contraseña, privilegios):
+        if(self.db.exists(nombre_usuario)):
             raise("El usuario ya existe")
         else:
-            self.default_user.acl_setuser(username=nombre_usuario, passwords=["+" + contraseña], commands=["+@all"], keys=["~*"], enabled=True)
+            self.db.hset(nombre_usuario, "nombre_completo", nombre_completo)
+            self.db.hset(nombre_usuario, "contraseña", contraseña)
+            self.db.hset(nombre_usuario, "privilegios", privilegios)
+     
+    def generate_token(self, nombre_usuario, contraseña):
+        if(self.db.hget(nombre_usuario, "contraseña").decode('UTF-8') == contraseña):
+            token = str(uuid.uuid4())
+            ttl = 60 * 60 * 24 * 30 # 30 días
             
-manager = redisManager()
+            user_info = {"nombre_usuario": nombre_usuario, "contraseña": contraseña}
+            
+            self.db.setex(token, ttl, pickle.dumps(user_info))
+            
+            return token
+        else:
+            raise("Usuario o contraseña incorrectos")
+     
+    def login(self, nombre_usuario, contraseña):
+        if self.db.hget(nombre_usuario, "contraseña").decode('UTF-8') == contraseña:
+            
+            privilegios = self.db.hget(nombre_usuario, "privilegios").decode('UTF-8')
+            
+            self.logged = True
+            
+            return privilegios
+            
+        else:
+            return -1
+     
+    def login_and_generate_token(self, nombre_usuario, contraseña):
+        if self.db.hget(nombre_usuario, "contraseña").decode('UTF-8') == contraseña:
+            
+            privilegios = self.db.hget(nombre_usuario, "privilegios").decode('UTF-8')  
+            token = self.generate_token(nombre_usuario, contraseña)
+            
+            self.logged = True
+            
+            return privilegios, token
+            
+        else:
+            return -1
+        
+    def login_with_token(self, token):
+        if(self.db.exists(token)):
+            
+            user_info = pickle.loads(self.db.get(token))
+            
+            return self.login(user_info["nombre_usuario"], user_info["contraseña"])       
 
-manager.default_user.acl_deluser("antonio")
+        else:
+            return -1
+        
+manager = RedisManager()
 
-manager.register("Antonio", "antonio", "1234", 1)
-
-manager.login("antonio", "1234")
+print(manager.login_with_token("d33c2b68-a09f-424a-8814-1a3090ca4891"))
