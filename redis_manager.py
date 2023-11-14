@@ -1,6 +1,7 @@
 import redis
 import uuid
 import pickle
+
 class RedisManager():
     def __init__(self):
         self.db = redis.Redis(host='localhost', port=6379, db=0)
