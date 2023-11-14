@@ -6,8 +6,20 @@ import time
 from typing import Generator, Any
 from geojson import Point
 import pymongo
+import redis
 import yaml
 import json
+
+r = redis.StrictRedis(host='localhost', port=6379, db=0)
+r.config_set('maxmemory', '150mb')                    #Esta linea limita la memoria máxima que puede tener la caché
+r.config_set('maxmemory-policy', 'allkeys-lru')       #Aqui permitimos que redis elimine los LRU (Least Recently Used) para que se mantenga en 150mb
+
+try:                      #Aqui podemos comprobar el estado de la conexión
+    r.ping()
+    print("Se ha establecido conexión con el servidor Redis")
+except redis.ConnectionError:
+    print("Error de conexión con el servidor Redis")
+
 
 def getLocationPoint(address: str) -> Point:
     """ 
@@ -137,8 +149,13 @@ class Model:
         """
             
         if self.__dict__.get("_id"):    # Si existe el id, se actualiza
+
+            r.expire(self.__dict__.get("_id"), 86400)   
             self.db.update_one({"_id": self._id}, {"$set": self.__dict__})
+
         else:   # Si no existe, se inserta creando un id nuevo en el proceso
+
+            r.setex( self.__dict__.get("_id"), 86400 , self.cursor)  #Lo añadimos también a la caché
             self.db.insert_one(self.__dict__)
        
                 
@@ -146,8 +163,17 @@ class Model:
         """
         Elimina el modelo de la base de datos
         """
+        eliminado = r.delete(self.__dict__.get("_id"))  
+        
+        if eliminado > 0:
+            print(f"La clave se ha eliminado correctamente de la caché.")
+        else:
+            print(f"La clave no existe en la caché o no se pudo eliminar.")
+     
         self.db.delete_one(self.__dict__)
     
+
+
     @classmethod
     def find(cls, filter: dict[str, str | dict]) -> Any:
         """ 
@@ -166,6 +192,7 @@ class Model:
         """ 
 
         # cls es el puntero a la clase
+        
         return ModelCursor(cls, cls.db.find(filter))
 
     @classmethod
@@ -192,7 +219,7 @@ class Model:
         NO IMPLEMENTAR HASTA LA SEGUNDA PRACTICA
         Busca un documento por su id utilizando la cache y lo devuelve.
         Si no se encuentra el documento, devuelve None.
-
+        
         Parameters
         ----------
             id : str
@@ -202,8 +229,16 @@ class Model:
             dict | None
                 documento encontrado o None si no se encuentra
         """ 
-        #TODO
-        pass
+        if r.get(id) == 1:              #Si existe en la caché, recarga el tiempo de expiración
+            r.expire(id, 86400)
+            return r.get(id)            #Tras buscarlo, actualiza la caché y desde ahí lo obtiene
+        else:                           #Si no existe, devuelve None
+            r.setex(id, 86400, self.find(id))
+            return None
+            
+
+       
+
 
     @classmethod
     def init_class(cls, db_collection: pymongo.collection.Collection, required_vars: set[str], admissible_vars: set[str]) -> None:
@@ -270,7 +305,11 @@ class ModelCursor:
         
         while self.cursor.alive:
             siguiente = next(self.cursor)
+
+            r.setex( siguiente.get("_id"), 86400 , self.cursor)  #setex permite añadir tiempo de expiración
+
             yield self.model(**siguiente)
+            
 
 def initApp(definitions_path: str = "./models.yml", mongodb_uri="mongodb://localhost:27017/", db_name="abd") -> None:
     """ 
