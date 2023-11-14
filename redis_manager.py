@@ -56,7 +56,6 @@ class RedisManager():
     def login_and_generate_token(self, nombre_usuario, contraseña):
         
         # Ver si existe el usuario
-        
         if not self.db.hexists("usuarios", nombre_usuario):
             print("El usuario no existe")
             return -1
@@ -84,10 +83,6 @@ class RedisManager():
         else:
             return -1
         
-    def logout(self, token):
-        self.db.delete(token)
-        print("Sesión cerrada correctamente")
-        
     def edit_user_info(self, nombre_usuario, nombre_completo=None, contraseña=None, privilegios=None):
         if(self.db.hexists("usuarios", nombre_usuario)):
             user_info = pickle.loads(self.db.hget("usuarios", nombre_usuario))
@@ -103,6 +98,32 @@ class RedisManager():
             
             self.db.hset("usuarios", nombre_usuario, pickle.dumps(user_info))
             print("Información de usuario actualizada correctamente")
+        else:
+            raise("El usuario no existe")
+        
+    # Funciones extra    
+    
+    def get_user_info(self, nombre_usuario):
+        if(self.db.hexists("usuarios", nombre_usuario)):
+            user_info = pickle.loads(self.db.hget("usuarios", nombre_usuario))
+            return user_info
+        else:
+            raise("El usuario no existe")
+        
+    def get_all_users(self):
+        users = self.db.hgetall("usuarios")
+        
+        for user in users:
+            print(user.decode("utf-8"), pickle.loads(users[user]))
+        
+    def logout(self, token):
+        self.db.delete(token)
+        print("Sesión cerrada correctamente")
+        
+    def delete_user(self, nombre_usuario):
+        if(self.db.hexists("usuarios", nombre_usuario)):
+            self.db.hdel("usuarios", nombre_usuario)
+            print("Usuario eliminado correctamente")
         else:
             raise("El usuario no existe")
         

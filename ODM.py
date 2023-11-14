@@ -472,8 +472,5 @@ def practica_1():
 if __name__ == "__main__":
     
     initApp()
-    
-    usuarios = Usuarios(nombre_completo="Alejandro Gómez", nombre_usuario="naranjas",contraseña="1234",privilegios="admin")
-    usuarios.save()
 
     
