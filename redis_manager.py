@@ -103,32 +103,40 @@ class RedisManager():
     # Funciones Help Desk
     
     # Función de petición de ayuda con prioridad
-    def create_ticket(self, nombre_usuario, titulo, descripcion):
+    def create_ticket(self, nombre_usuario, titulo, descripcion, prioridad):
         if(self.db.hexists("usuarios", nombre_usuario)):
-            ticket_id = str(uuid.uuid4())
-            ticket_info = {"titulo": titulo, "descripcion": descripcion, "estado": "abierto", "usuario": nombre_usuario}
-            self.db.hset("tickets", ticket_id, pickle.dumps(ticket_info))
+            ticket_info = {"titulo": titulo, "descripcion": descripcion, "usuario": nombre_usuario}
+            
+            self.db.zadd("tickets", {pickle.dumps(ticket_info): prioridad})
+            
             print("Ticket creado correctamente")
         else:
             raise("El usuario no existe")
 
     # Función de atención a usuarios
-    def attend_ticket(self, ticket_id, nombre_usuario):
-        if(self.db.hexists("usuarios", nombre_usuario)):
-            if(self.db.hexists("tickets", ticket_id)):
-                ticket_info = pickle.loads(self.db.hget("tickets", ticket_id))
+    def attend_ticket(self):
+        
+        # Si no hay tickets se queda en espera
+        
+        if(self.db.zcard("tickets") == 0):
+            print("No quedan tickets por atender, esperando...")
+
+            while(self.db.zcard("tickets") == 0):
+                pass
+        
+        # Se atienden primero los tickets con mayor valor de prioridad
+
+        ticket = self.db.zrevrange("tickets", 0, 0)[0]
                 
-                if(ticket_info["estado"] == "abierto"):
-                    ticket_info["estado"] = "en proceso"
-                    ticket_info["tecnico"] = nombre_usuario
-                    self.db.hset("tickets", ticket_id, pickle.dumps(ticket_info))
-                    print("Ticket atendido correctamente")
-                else:
-                    raise("El ticket no está abierto")
-            else:
-                raise("El ticket no existe")
-        else:
-            raise("El usuario no existe")
+        ticket = pickle.loads(ticket)
+        
+        self.db.zrem("tickets", pickle.dumps(ticket))
+                
+        id_usuario = ticket["usuario"]
+        
+        print("Ticket:" + ticket["titulo"] + ", atendido correctamente")
+        
+        return id_usuario
         
         
     # Funciones extra    
@@ -157,7 +165,7 @@ class RedisManager():
         else:
             raise("El usuario no existe")
         
-# Comprobar que todo funciona correctamente        
+# Test       
 
 manager = RedisManager()
 
@@ -187,3 +195,20 @@ print("Información de usuario: ", manager.get_user_info("antonio"))
 
 print("\nCerrar sesión: ")
 manager.logout(token) # Cerrar sesión
+
+# Help Desk
+
+print("\nHelp Desk: ")
+
+manager.register("juan", "Juan Pérez", "1234", 2) # Registrar un usuario
+
+print("\nCrear tickets: ")
+
+manager.create_ticket("antonio", "No funciona el ordenador", "No enciende", 1) # Crear ticket
+manager.create_ticket("juan", "Redis no funciona", "No se puede conectar", 3) # Crear ticket
+manager.create_ticket("antonio", "No va el internet", "No hay internet", 2) # Crear ticket
+
+print("\nAtender tickets: ")
+
+for i in range(3):
+    print("Usuario del ticket: " + manager.attend_ticket()) # Atender ticket
