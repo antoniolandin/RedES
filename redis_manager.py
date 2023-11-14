@@ -5,57 +5,78 @@ import pickle
 class RedisManager():
     def __init__(self):
         self.db = redis.Redis(host='localhost', port=6379, db=0)
-        self.logged = False
         
     def register(self, nombre_usuario, nombre_completo, contraseña, privilegios):
-        if(self.db.exists(nombre_usuario)):
+        if(self.db.hexists("usuarios", nombre_usuario)):
             raise("El usuario ya existe")
         else:
-            self.db.hset(nombre_usuario, "nombre_completo", nombre_completo)
-            self.db.hset(nombre_usuario, "contraseña", contraseña)
-            self.db.hset(nombre_usuario, "privilegios", privilegios)
+            user_info = {"nombre_completo": nombre_completo, "contraseña": contraseña, "privilegios": privilegios}
+            self.db.hset("usuarios", nombre_usuario, pickle.dumps(user_info))
+            print("Usuario registrado correctamente")
      
     def generate_token(self, nombre_usuario, contraseña):
-        if(self.db.hget(nombre_usuario, "contraseña").decode('UTF-8') == contraseña):
+        
+        if not self.db.hexists("usuarios", nombre_usuario):
+            raise("El usuario no existe")
+        
+        user_info = pickle.loads(self.db.hget("usuarios", nombre_usuario))
+        
+        
+        if(user_info["contraseña"] == contraseña):
             token = str(uuid.uuid4())
             ttl = 60 * 60 * 24 * 30 # 30 días
             
-            user_info = {"nombre_usuario": nombre_usuario, "contraseña": contraseña}
+            login_info = {"nombre_usuario": nombre_usuario, "contraseña": contraseña}
             
-            self.db.setex(token, ttl, pickle.dumps(user_info))
+            self.db.setex(token, ttl, pickle.dumps(login_info))
             
             return token
         else:
             raise("Usuario o contraseña incorrectos")
      
     def login(self, nombre_usuario, contraseña):
-        if self.db.hget(nombre_usuario, "contraseña").decode('UTF-8') == contraseña:
+        
+        # Ver si existe el usuario
+        if not self.db.hexists("usuarios", nombre_usuario):
+            print("El usuario no existe")
+            return -1
+        
+        
+        user_info = pickle.loads(self.db.hget("usuarios", nombre_usuario))
+        
+        if user_info["contraseña"] == contraseña:
             
-            privilegios = self.db.hget(nombre_usuario, "privilegios").decode('UTF-8')
+            privilegios = user_info["privilegios"]
             
-            self.logged = True
-            
-            return privilegios
-            
+            return privilegios   
         else:
+            print("Contraseña incorrecta")
             return -1
      
     def login_and_generate_token(self, nombre_usuario, contraseña):
-        if self.db.hget(nombre_usuario, "contraseña").decode('UTF-8') == contraseña:
+        
+        # Ver si existe el usuario
+        
+        if not self.db.hexists("usuarios", nombre_usuario):
+            print("El usuario no existe")
+            return -1
+        
+        user_info = pickle.loads(self.db.hget("usuarios", nombre_usuario))
+        
+        
+        if user_info["contraseña"] == contraseña:
             
-            privilegios = self.db.hget(nombre_usuario, "privilegios").decode('UTF-8')  
+            privilegios = user_info["privilegios"] 
             token = self.generate_token(nombre_usuario, contraseña)
-            
-            self.logged = True
             
             return privilegios, token
             
         else:
+            print("Contraseña incorrecta")
             return -1
         
     def login_with_token(self, token):
         if(self.db.exists(token)):
-            
             user_info = pickle.loads(self.db.get(token))
             
             return self.login(user_info["nombre_usuario"], user_info["contraseña"])       
@@ -63,6 +84,23 @@ class RedisManager():
         else:
             return -1
         
+# Comprobar que todo funciona correctamente        
+
 manager = RedisManager()
 
-print(manager.login_with_token("d33c2b68-a09f-424a-8814-1a3090ca4891"))
+manager.db.flushall() # Borrar todos los datos de la base de datos
+
+manager.register("antonio", "Antonio Cabrera", "1234", 1) # Registrar un usuario
+
+print("\nLogin con usuario y contraseña: ")
+
+privilegios,token = manager.login_and_generate_token("antonio", "1234") # Logearse con el usuario
+
+print("Token: ", token)
+print("Privilegios: ", privilegios)
+
+print("\nLogin con token: ")
+
+privilegios = manager.login_with_token(token) # Logearse con el token
+
+print("Privilegios: ", privilegios)
