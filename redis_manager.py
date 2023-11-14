@@ -39,8 +39,7 @@ class RedisManager():
         if not self.db.hexists("usuarios", nombre_usuario):
             print("El usuario no existe")
             return -1
-        
-        
+         
         user_info = pickle.loads(self.db.hget("usuarios", nombre_usuario))
         
         if user_info["contraseña"] == contraseña:
@@ -104,7 +103,7 @@ class RedisManager():
     
     # Función de petición de ayuda con prioridad
     def create_ticket(self, nombre_usuario, titulo, descripcion, prioridad):
-        if(self.db.hexists("usuarios", nombre_usuario)):
+        if(self.db.hexists("usuarios", nombre_usuario)): # Ver si existe el usuario
             ticket_info = {"titulo": titulo, "descripcion": descripcion, "usuario": nombre_usuario}
             
             self.db.zadd("tickets", {pickle.dumps(ticket_info): prioridad})
@@ -212,3 +211,6 @@ print("\nAtender tickets: ")
 
 for i in range(3):
     print("Usuario del ticket: " + manager.attend_ticket()) # Atender ticket
+
+print("\nAtender ticket sin tickets: ")
+manager.attend_ticket() # Atender ticket sin tickets
