@@ -1,7 +1,6 @@
 import redis
 import uuid
 import pickle
-
 class RedisManager():
     def __init__(self):
         self.db = redis.Redis(host='localhost', port=6379, db=0)
@@ -101,6 +100,37 @@ class RedisManager():
         else:
             raise("El usuario no existe")
         
+    # Funciones Help Desk
+    
+    # Función de petición de ayuda con prioridad
+    def create_ticket(self, nombre_usuario, titulo, descripcion):
+        if(self.db.hexists("usuarios", nombre_usuario)):
+            ticket_id = str(uuid.uuid4())
+            ticket_info = {"titulo": titulo, "descripcion": descripcion, "estado": "abierto", "usuario": nombre_usuario}
+            self.db.hset("tickets", ticket_id, pickle.dumps(ticket_info))
+            print("Ticket creado correctamente")
+        else:
+            raise("El usuario no existe")
+
+    # Función de atención a usuarios
+    def attend_ticket(self, ticket_id, nombre_usuario):
+        if(self.db.hexists("usuarios", nombre_usuario)):
+            if(self.db.hexists("tickets", ticket_id)):
+                ticket_info = pickle.loads(self.db.hget("tickets", ticket_id))
+                
+                if(ticket_info["estado"] == "abierto"):
+                    ticket_info["estado"] = "en proceso"
+                    ticket_info["tecnico"] = nombre_usuario
+                    self.db.hset("tickets", ticket_id, pickle.dumps(ticket_info))
+                    print("Ticket atendido correctamente")
+                else:
+                    raise("El ticket no está abierto")
+            else:
+                raise("El ticket no existe")
+        else:
+            raise("El usuario no existe")
+        
+        
     # Funciones extra    
     
     def get_user_info(self, nombre_usuario):
@@ -134,6 +164,7 @@ manager = RedisManager()
 manager.db.flushall() # Borrar todos los datos de la base de datos
 
 manager.register("antonio", "Antonio Cabrera", "1234", 1) # Registrar un usuario
+print("Información de usuario: ", manager.get_user_info("antonio"))
 
 print("\nLogin con usuario y contraseña: ")
 
@@ -141,16 +172,18 @@ privilegios,token = manager.login_and_generate_token("antonio", "1234") # Logear
 
 print("Token: ", token)
 print("Privilegios: ", privilegios)
-
+print("Información de usuario: ", manager.get_user_info("antonio"))
 
 print("\nEditar privilegios del usuario: ")
 manager.edit_user_info("antonio", privilegios=2) # Editar privilegios del usuario
+print("Información de usuario: ", manager.get_user_info("antonio"))
 
 print("\nLogin con token: ")
 
 privilegios = manager.login_with_token(token) # Logearse con el token
 
 print("Privilegios: ", privilegios)
+print("Información de usuario: ", manager.get_user_info("antonio"))
 
 print("\nCerrar sesión: ")
 manager.logout(token) # Cerrar sesión
