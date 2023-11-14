@@ -84,6 +84,28 @@ class RedisManager():
         else:
             return -1
         
+    def logout(self, token):
+        self.db.delete(token)
+        print("Sesión cerrada correctamente")
+        
+    def edit_user_info(self, nombre_usuario, nombre_completo=None, contraseña=None, privilegios=None):
+        if(self.db.hexists("usuarios", nombre_usuario)):
+            user_info = pickle.loads(self.db.hget("usuarios", nombre_usuario))
+            
+            if(nombre_completo != None):
+                user_info["nombre_completo"] = nombre_completo
+                
+            if(contraseña != None):
+                user_info["contraseña"] = contraseña
+            
+            if(privilegios != None):
+                user_info["privilegios"] = privilegios
+            
+            self.db.hset("usuarios", nombre_usuario, pickle.dumps(user_info))
+            print("Información de usuario actualizada correctamente")
+        else:
+            raise("El usuario no existe")
+        
 # Comprobar que todo funciona correctamente        
 
 manager = RedisManager()
@@ -99,8 +121,15 @@ privilegios,token = manager.login_and_generate_token("antonio", "1234") # Logear
 print("Token: ", token)
 print("Privilegios: ", privilegios)
 
+
+print("\nEditar privilegios del usuario: ")
+manager.edit_user_info("antonio", privilegios=2) # Editar privilegios del usuario
+
 print("\nLogin con token: ")
 
 privilegios = manager.login_with_token(token) # Logearse con el token
 
 print("Privilegios: ", privilegios)
+
+print("\nCerrar sesión: ")
+manager.logout(token) # Cerrar sesión
