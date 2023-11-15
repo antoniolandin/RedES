@@ -10,10 +10,11 @@ import redis
 import yaml
 import json
 import redis
+from bson import ObjectId 
 
 r = redis.StrictRedis(host='localhost', port=6379, db=0)
 r.config_set('maxmemory', '150mb')                    #Esta linea limita la memoria máxima que puede tener la caché
-r.config_set('maxmemory-policy', 'allkeys-lru')       #Aqui permitimos que redis elimine los LRU (Least Recently Used) para que se mantenga en 150mb
+r.config_set('maxmemory-policy', 'volatile-lru')       #Aqui permitimos que redis elimine los LRU (Least Recently Used) para que se mantenga en 150mb
 
 try:                                        #Aqui podemos comprobar el estado de la conexión
     r.ping()
@@ -149,23 +150,33 @@ class Model:
         actualiza el documento existente con los nuevos valores del
         modelo.
         """
-    
-        if self.__dict__.get("_id"):    # Si existe el id, se actualiza
+        
 
-            r.expire(str(self.__dict__.get("_id")), 86400)   
-            self.db.update_one({"_id": self._id}, {"$set": self.__dict__})
+        if self.__dict__.get('_id'):    # Si existe el id, se actualiza
+            self.db.update_one({"_id": self.__dict__.get("_id")}, {"$set": self.__dict__})
 
         else:   # Si no existe, se inserta creando un id nuevo en el proceso
-
-            r.setex( str(self.__dict__.get("_id")), 86400 , str(self.__dict__))  #Lo añadimos también a la caché
             self.db.insert_one(self.__dict__)
        
-                
+
+        key = str(self.__dict__.get('_id'))
+        valor = r.get(key)
+
+        if valor is not None:
+            print("Save: Estaba en caché, reactualizando caché")
+            r.expire(key, 86400)  
+        else:                   #Lo añadimos también a la caché
+            print("Save: Añadiendo a caché")
+            r.setex( key,86400, str(self.__dict__))     
+
+
+
     def delete(self) -> None:
         """
         Elimina el modelo de la base de datos
         """
-        eliminado = r.delete(str(self.__dict__.get("_id")))  
+        key = str(self.__dict__.get("_id"))
+        eliminado = r.delete(key)  
         
         if eliminado > 0:              #Comprobante de que se ha eliminado correctamente un archivo
             print(f"La clave se ha eliminado correctamente de la caché.")
@@ -216,8 +227,8 @@ class Model:
                 cursor de pymongo con el resultado de la consulta
         """ 
         return cls.db.aggregate(pipeline)
-    
-    def find_by_id(self, id: str) -> dict | None:
+    @classmethod
+    def find_by_id(cls, id: str) -> dict | None:
         """ 
         NO IMPLEMENTAR HASTA LA SEGUNDA PRACTICA
         Busca un documento por su id utilizando la cache y lo devuelve.
@@ -232,17 +243,21 @@ class Model:
             dict | None
                 documento encontrado o None si no se encuentra
         """
+        valor = r.get(id)
+        documento = cls.db.find_one({"_id": ObjectId(id)})
 
-        
-
-        if r.get(id) == 1:                                  #Si existe en la caché, recarga el tiempo de expiración
+        if valor is not None:                                  #Si existe en la caché, recarga el tiempo de expiración
+            print("Find_By_ID: Estaba en caché")
             r.expire(id, 86400)
             return r.get(id)                                #Tras buscarlo, actualiza la caché y desde ahí lo obtiene
-        else:   
-            if self.db.count_documents({'_id': id}) > 0:    #Si no está en caché la busca en mongo
-                r.setex(id, 86400, self.db.find_one({'_id': id}))
+        else:  
+            print("Find_By_ID: No estaba en caché") 
+            if documento is not None:    #Si no está en caché la busca en mongo
+                print("Find_By_ID: Estaba en mongo, cargando en caché")
+                r.setex(id, 86400, str(documento))
                 return r.get(id) 
-            else:                                           #Si no existe, devuelve None            
+            else:          
+                print("Find_By_ID: No encontrado")                                 #Si no existe, devuelve None            
                 return None
 
     @classmethod
@@ -313,6 +328,7 @@ class ModelCursor:
             modelo = self.model(**siguiente)
 
             r.setex( str(modelo._id), 86400 , str(modelo.__dict__))  #setex permite añadir tiempo de expiración
+
 
             yield modelo
             
@@ -472,9 +488,21 @@ def practica_1():
             
         print(f"Total: {numero_resultados} resultados")
 
-
-
 if __name__ == "__main__":
     
     initApp()
-    practica_1()
+    r.flushall()
+
+    modelo = MiModelo(nombre="Alex", apellido="gomez", edad="20")
+    modelo.save()                                                                       #Primero salvamos y vemos que añade en la caché
+
+    print("Contenido de caché:" , r.get(str(modelo.__dict__.get('_id'))))               #Comrpobamos que se almacenó en caché
+
+    print("Buscado mediante id: " , modelo.find_by_id(str(modelo.__dict__.get('_id'))))   #Buscamos por id el modelo
+
+    print("Borramos la caché a proposito para comprobar otra funcionalidad de find_by_id")
+    print("Caché borrada: ", r.delete(str(modelo.__dict__.get('_id'))))                  #La borramos de la caché para que el find_by_id la busque en mongo y luego la vuelva a subir a la caché
+
+    print("Buscado mediante id:" , modelo.find_by_id(str(modelo.__dict__.get('_id'))))
+    modelo.delete()                                                                      #Borramos el modelo para que se borre de la caché también
+    print("Buscado mediante id:" , modelo.find_by_id(str(modelo.__dict__.get('_id'))))   #Comprobamos que si no está ni en caché ni en mongo, devuelve None
