@@ -149,7 +149,7 @@ class Model:
         actualiza el documento existente con los nuevos valores del
         modelo.
         """
-            
+    
         if self.__dict__.get("_id"):    # Si existe el id, se actualiza
 
             r.expire(str(self.__dict__.get("_id")), 86400)   
@@ -165,7 +165,7 @@ class Model:
         """
         Elimina el modelo de la base de datos
         """
-        eliminado = r.delete(self.__dict__.get("_id"))  
+        eliminado = r.delete(str(self.__dict__.get("_id")))  
         
         if eliminado > 0:              #Comprobante de que se ha eliminado correctamente un archivo
             print(f"La clave se ha eliminado correctamente de la caché.")
@@ -231,13 +231,25 @@ class Model:
         -------
             dict | None
                 documento encontrado o None si no se encuentra
-        """ 
-        if r.get(id) == 1:              #Si existe en la caché, recarga el tiempo de expiración
+        """
+
+        
+
+        if r.get(id) == 1:                                  #Si existe en la caché, recarga el tiempo de expiración
             r.expire(id, 86400)
-            return r.get(id)            #Tras buscarlo, actualiza la caché y desde ahí lo obtiene
-        else:                           #Si no existe, devuelve None
-            return None
+            return r.get(id)                                #Tras buscarlo, actualiza la caché y desde ahí lo obtiene
+        else:   
+            if self.db.count_documents({'_id': id}) > 0:    #Si no está en caché la busca en mongo
+                r.setex(id, 86400, self.db.find_one({'_id': id}))
+                return r.get(id) 
+            else:                                           #Si no existe, devuelve None            
+                return None
+        
             
+
+       
+
+
     @classmethod
     def init_class(cls, db_collection: pymongo.collection.Collection, required_vars: set[str], admissible_vars: set[str]) -> None:
         """ 
@@ -465,26 +477,9 @@ def practica_1():
             
         print(f"Total: {numero_resultados} resultados")
 
-def practica2_cache():
-    initApp()
-
-    modelo = MiModelo(nombre="Alberto", apellido="Gutierrez", edad="27")
-    modelo.direccion = "Calle de la Reina, 28004 Madrid"
-    modelo.save()
-    print("\nCargando documentos desde data.json...")
-    documentos = []
-    archivo_json = open('data.json')
-    for modelo in json.load(archivo_json):
-        documentos.append(Persona(**modelo))
-        documentos[-1].save()   # Guardamos cada documento en la base de datos
-    archivo_json.close()
-    print("Documentos cargados correctamente")
-
-    delete(modelo._id)
-    
 
 
 if __name__ == "__main__":
     
     initApp()
-    practica2_cache()
+    practica_1()
