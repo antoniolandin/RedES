@@ -13,7 +13,7 @@ import redis
 
 r = redis.StrictRedis(host='localhost', port=6379, db=0)
 r.config_set('maxmemory', '150mb')                    #Esta linea limita la memoria máxima que puede tener la caché
-r.config_set('maxmemory-policy', 'allkeys-lru')       #Aqui permitimos que redis elimine los LRU (Least Recently Used) para que se mantenga en 150mb
+r.config_set('maxmemory-policy', 'volatile-lru')       #Aqui permitimos que redis elimine los LRU (Least Recently Used) para que se mantenga en 150mb
 
 try:                                        #Aqui podemos comprobar el estado de la conexión
     r.ping()
@@ -149,7 +149,7 @@ class Model:
         actualiza el documento existente con los nuevos valores del
         modelo.
         """
-    
+
         if self.__dict__.get("_id"):    # Si existe el id, se actualiza
 
             r.expire(str(self.__dict__.get("_id")), 86400)   
@@ -160,7 +160,7 @@ class Model:
             r.setex( str(self.__dict__.get("_id")), 86400 , str(self.__dict__))  #Lo añadimos también a la caché
             self.db.insert_one(self.__dict__)
        
-                
+
     def delete(self) -> None:
         """
         Elimina el modelo de la base de datos
@@ -476,8 +476,6 @@ def practica_1():
             numero_resultados += 1
             
         print(f"Total: {numero_resultados} resultados")
-
-
 
 if __name__ == "__main__":
     
