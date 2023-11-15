@@ -244,11 +244,6 @@ class Model:
                 return r.get(id) 
             else:                                           #Si no existe, devuelve None            
                 return None
-        
-            
-
-       
-
 
     @classmethod
     def init_class(cls, db_collection: pymongo.collection.Collection, required_vars: set[str], admissible_vars: set[str]) -> None:
