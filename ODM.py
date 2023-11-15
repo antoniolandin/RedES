@@ -15,7 +15,7 @@ r = redis.StrictRedis(host='localhost', port=6379, db=0)
 r.config_set('maxmemory', '150mb')                    #Esta linea limita la memoria máxima que puede tener la caché
 r.config_set('maxmemory-policy', 'allkeys-lru')       #Aqui permitimos que redis elimine los LRU (Least Recently Used) para que se mantenga en 150mb
 
-try:                      #Aqui podemos comprobar el estado de la conexión
+try:                                        #Aqui podemos comprobar el estado de la conexión
     r.ping()
     print("Se ha establecido conexión con el servidor Redis")
 except redis.ConnectionError:
@@ -152,12 +152,12 @@ class Model:
             
         if self.__dict__.get("_id"):    # Si existe el id, se actualiza
 
-            r.expire(self.__dict__.get("_id"), 86400)   
+            r.expire(str(self.__dict__.get("_id")), 86400)   
             self.db.update_one({"_id": self._id}, {"$set": self.__dict__})
 
         else:   # Si no existe, se inserta creando un id nuevo en el proceso
 
-            r.setex( self.__dict__.get("_id"), 86400 , self.cursor)  #Lo añadimos también a la caché
+            r.setex( str(self.__dict__.get("_id")), 86400 , str(self.__dict__))  #Lo añadimos también a la caché
             self.db.insert_one(self.__dict__)
        
                 
@@ -167,7 +167,7 @@ class Model:
         """
         eliminado = r.delete(self.__dict__.get("_id"))  
         
-        if eliminado > 0:
+        if eliminado > 0:              #Comprobante de que se ha eliminado correctamente un archivo
             print(f"La clave se ha eliminado correctamente de la caché.")
         else:
             print(f"La clave no existe en la caché o no se pudo eliminar.")
@@ -196,6 +196,7 @@ class Model:
         # cls es el puntero a la clase
         
         return ModelCursor(cls, cls.db.find(filter))
+
 
     @classmethod
     def aggregate(cls, pipeline: list[dict]) -> pymongo.command_cursor.CommandCursor:
@@ -235,7 +236,6 @@ class Model:
             r.expire(id, 86400)
             return r.get(id)            #Tras buscarlo, actualiza la caché y desde ahí lo obtiene
         else:                           #Si no existe, devuelve None
-            r.setex(id, 86400, self.find(id))
             return None
             
 
@@ -307,10 +307,11 @@ class ModelCursor:
         
         while self.cursor.alive:
             siguiente = next(self.cursor)
+            modelo = self.model(**siguiente)
 
-            r.setex( siguiente.get("_id"), 86400 , self.cursor)  #setex permite añadir tiempo de expiración
+            r.setex( str(modelo._id), 86400 , str(modelo.__dict__))  #setex permite añadir tiempo de expiración
 
-            yield self.model(**siguiente)
+            yield modelo
             
 
 def initApp(definitions_path: str = "./models.yml", mongodb_uri="mongodb://localhost:27017/", db_name="abd") -> None:
@@ -467,10 +468,27 @@ def practica_1():
             numero_resultados += 1
             
         print(f"Total: {numero_resultados} resultados")
+
+def practica2_cache():
+    initApp()
+
+    modelo = MiModelo(nombre="Alberto", apellido="Gutierrez", edad="27")
+    modelo.direccion = "Calle de la Reina, 28004 Madrid"
+    modelo.save()
+    print("\nCargando documentos desde data.json...")
+    documentos = []
+    archivo_json = open('data.json')
+    for modelo in json.load(archivo_json):
+        documentos.append(Persona(**modelo))
+        documentos[-1].save()   # Guardamos cada documento en la base de datos
+    archivo_json.close()
+    print("Documentos cargados correctamente")
+
+    delete(modelo._id)
     
+
 
 if __name__ == "__main__":
     
     initApp()
-
-    
+    practica2_cache()
