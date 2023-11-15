@@ -7,21 +7,7 @@ from typing import Generator, Any
 from geojson import Point
 import pymongo
 import redis
-import yaml
-import json
-import redis
-from bson import ObjectId 
-
-r = redis.StrictRedis(host='localhost', port=6379, db=0)
-r.config_set('maxmemory', '150mb')                    #Esta linea limita la memoria máxima que puede tener la caché
-r.config_set('maxmemory-policy', 'volatile-lru')       #Aqui permitimos que redis elimine los LRU (Least Recently Used) para que se mantenga en 150mb
-
-try:                                        #Aqui podemos comprobar el estado de la conexión
-    r.ping()
-    print("Se ha establecido conexión con el servidor Redis")
-except redis.ConnectionError:
-    print("Error de conexión con el servidor Redis")
-
+from bson import ObjectId      #Aqui permitimos que redis elimine los LRU (Least Recently Used) para que se mantenga en 150mb
 
 def getLocationPoint(address: str) -> Point:
     """ 
@@ -94,6 +80,7 @@ class Model:
     required_vars: set[str]
     admissible_vars: set[str]
     db: pymongo.collection.Collection
+    r: redis.client.Redis
 
     def __init__(self, **kwargs: dict[str, str | dict]):
         """
@@ -160,14 +147,14 @@ class Model:
        
 
         key = str(self.__dict__.get('_id'))
-        valor = r.get(key)
+        valor = self.r.get(key)
 
         if valor is not None:
             print("Save: Estaba en caché, reactualizando caché")
-            r.expire(key, 86400)  
+            self.r.expire(key, 86400)  
         else:                   #Lo añadimos también a la caché
             print("Save: Añadiendo a caché")
-            r.setex( key,86400, str(self.__dict__))     
+            self.r.setex( key,86400, str(self.__dict__))     
 
 
 
@@ -176,7 +163,7 @@ class Model:
         Elimina el modelo de la base de datos
         """
         key = str(self.__dict__.get("_id"))
-        eliminado = r.delete(key)  
+        eliminado = self.r.delete(key)  
         
         if eliminado > 0:              #Comprobante de que se ha eliminado correctamente un archivo
             print(f"La clave se ha eliminado correctamente de la caché.")
@@ -243,25 +230,22 @@ class Model:
             dict | None
                 documento encontrado o None si no se encuentra
         """
-        valor = r.get(id)
+        valor = cls.r.get(id)
         documento = cls.db.find_one({"_id": ObjectId(id)})
 
         if valor is not None:                                  #Si existe en la caché, recarga el tiempo de expiración
-            print("Find_By_ID: Estaba en caché")
-            r.expire(id, 86400)
-            return r.get(id)                                #Tras buscarlo, actualiza la caché y desde ahí lo obtiene
+            cls.r.expire(id, 86400)
+            return cls.r.get(id)                                #Tras buscarlo, actualiza la caché y desde ahí lo obtiene
         else:  
-            print("Find_By_ID: No estaba en caché") 
             if documento is not None:    #Si no está en caché la busca en mongo
-                print("Find_By_ID: Estaba en mongo, cargando en caché")
-                r.setex(id, 86400, str(documento))
-                return r.get(id) 
+                cls.r.setex(id, 86400, str(documento))
+                return cls.r.get(id) 
             else:          
-                print("Find_By_ID: No encontrado")                                 #Si no existe, devuelve None            
+                print("find_by_id(): No encontrado")                                 #Si no existe, devuelve None            
                 return None
 
     @classmethod
-    def init_class(cls, db_collection: pymongo.collection.Collection, required_vars: set[str], admissible_vars: set[str]) -> None:
+    def init_class(cls, db_collection: pymongo.collection.Collection, redis_client: redis.client.Redis, required_vars: set[str], admissible_vars: set[str]) -> None:
         """ 
         Inicializa las variables de clase en la inicializacion del sistema.
         En principio nada que hacer aqui salvo que se quieran realizar
@@ -277,6 +261,7 @@ class Model:
                 Set de variables admitidas por el modelo
         """
         cls.db = db_collection
+        cls.r = redis_client
         cls.required_vars = required_vars
         cls.admissible_vars = admissible_vars
         
@@ -327,182 +312,6 @@ class ModelCursor:
             siguiente = next(self.cursor)
             modelo = self.model(**siguiente)
 
-            r.setex( str(modelo._id), 86400 , str(modelo.__dict__))  #setex permite añadir tiempo de expiración
-
+            self.r.setex( str(modelo._id), 86400 , str(modelo.__dict__))  #setex permite añadir tiempo de expiración
 
             yield modelo
-            
-
-def initApp(definitions_path: str = "./models.yml", mongodb_uri="mongodb://localhost:27017/", db_name="abd") -> None:
-    """ 
-    Declara las clases que heredan de Model para cada uno de los 
-    modelos de las colecciones definidas en definitions_path.
-    Inicializa las clases de los modelos proporcionando las variables 
-    admitidas y requeridas para cada una de ellas y la conexión a la
-    collecion de la base de datos.
-    
-    Parameters
-    ----------
-        definitions_path : str
-            ruta al fichero de definiciones de modelos
-        mongodb_uri : str
-            uri de conexion a la base de datos
-        db_name : str
-            nombre de la base de datos
-    """
-    # Inicializar base de datos:
-    base_de_datos = pymongo.MongoClient(mongodb_uri)[db_name]
-    
-    # Obtener las definiciones de modelos del fichero yaml
-    with open(definitions_path, "r") as f:
-        modelos = yaml.load(f, Loader=yaml.FullLoader)
-                
-    # Declarar tantas clases modelo como colecciones existan en la base de datos
-    # Leer el fichero de definiciones de modelos para obtener las colecciones
-    # y las variables admitidas y requeridas para cada una de ellas.
-    # Ejemplo de declaracion de modelo para colecion llamada MiModelo
-    #globals()["MiModelo"] = type("MiModelo", (Model,),{})
-    
-    for nombre_coleccion in modelos.keys():
-        globals()[nombre_coleccion] = type(nombre_coleccion, (Model,), {})   
-        modelo = modelos[nombre_coleccion]
-        globals()[nombre_coleccion].init_class(db_collection= base_de_datos[nombre_coleccion], required_vars=modelo["required_vars"], admissible_vars=modelo["admissible_vars"])
-    
-    # Ignorar el warning de Pylance sobre MiModelo, es incapaz de detectar
-    # que se ha declarado la clase en la linea anterior ya que se hace
-    # en tiempo de ejecucion.
-    
-def practica_1():
-    # Almacenar los pipelines de las consultas en Q1, Q2, etc. 
-
-    # Q1: Listado de todas personas que han estudiado en la UPM o UAM
-    Q1 = [{'$match': {'$or' : [{'universidad': "UPM"}, {'universidad':"UAM"}]}}]
-
-    # Q2: Listado  de  las  diferentes  universidades  en  las  que  han  estudiado  las  personas  residentes en Madrid
-    Q2 = [{'$match': {'ciudad': 'Madrid'}},{'$project': {'_id':0,'universidad': 1}}]
-
-    # Q3: Personas que, en la descripción de su perfil, incluye los términos “Big Data” o “Ingeligencia Artificial”
-    Q3 = [{'$match' : {'$or': [{'descripcion': "Big Data"},{'descripcion': "Inteligencia Artificial"}]}}]
-
-    # Q4: Guarda  en  una  tabla  nueva  el  listado  de  las  personas  que  ha  terminado  alguno  de  sus  estudios en el 2017 o después
-    Q4 = [{'$match': {"estudios.fin": {'$gte': 2017}}}, {'$out':"estudiosFin"}]
-
-    # Q5: Calcular  el  número  medio  de  estudios  realizados  por  las  personas  que  han  trabajado  o  trabajan en la Microsoft
-    Q5 = [{'$match': {'trabajos': "Microsoft"}}, {'$group': {'_id': "", 'promedio': {'$avg': {'$sum': {'$size': "$estudios"}}}}}]
-
-    # Q6: Distancia media al trabajo (distancia geodésica) de los actuales trabajadores de Google. Se pueden indicar las coordenadas de la oficina de Google manualmente
-    Q6 = [{'$geoNear': {'near': { 'type': "Point", 'coordinates': [ 40.4165 ,  -3.7026] },  'distanceField': "dist.calculated"}},{'$match': {'trabajos': "Google"}}, {'$group': {'_id': "",'distancia_media': {'$avg': {'$sum': "$dist.calculated"}}}}, {'$project':{'_id':0}}]
-
-    # Q7: Listado de las tres universidades que más veces aparece como centro de estudios de las personas registradas. Mostrar universidad y el número de veces que aparece
-    Q7 = [{'$match': {"universidad" :{ "$ne" : 'null' } } }, {"$group" : {'_id': "$universidad", 'count' :{'$sum':1}}},{'$sort': {'count': -1}},{'$limit':3}]
-
-        
-    # Inicializar base de datos y modelos con initApp
-    initApp()
-
-    # Hacer pruebas para comprobar que funciona correctamente el modelo
-
-    # Crear modelo
-    modelo = MiModelo(nombre="Alberto", apellido="Gutierrez", edad="27")
-
-    # Asignar nuevo valor a variable admitida del objeto 
-    modelo.direccion = "Calle de la Reina, 28004 Madrid"
-
-    # Asignar nuevo valor a variable no admitida del objeto 
-    print("Asignar nuevo valor a variable no admitida del objeto:")
-    
-    try:
-        modelo.peso = 80
-    except ValueError as e:
-        print(e)
-        
-    # Guardar
-    modelo.save()
-    
-    # Asignar nuevo valor a variable admitida del objeto
-    modelo.telefono = "+34 650292929"
-    
-    # Guardar
-    modelo.save()
-    
-    # Buscar nuevo documento con find
-    cursor = iter(modelo.find({"nombre": "Alberto"}))
-    
-    # Obtener primer documento
-
-    primer_documento = next(cursor)
-    print(f"\nObtener primer documento:\nTipo:{type(primer_documento)}\nValor_nombre: {primer_documento.nombre}")    
-    # Modificar valor de variable admitida
-    
-    modelo.dni = "12345678A"
-
-    # Guardar
-    
-    modelo.save()
-
-    #Creamos nuevo modelo
-
-    # Ejecutar consultas Q1, Q2, etc. y mostrarlo
-
-    # Primero vamos a cargar nuestros documentos del archivo data.json
-    
-    print("\nCargando documentos desde data.json...")
-    
-    documentos = []
-    
-    archivo_json = open('data.json')
-    
-    for modelo in json.load(archivo_json):
-        documentos.append(Persona(**modelo))
-        documentos[-1].save()   # Guardamos cada documento en la base de datos
-    
-    archivo_json.close()
-    
-    print("Documentos cargados correctamente")
-    
-    # Ahora ejecutamos las consultas
-    
-    consultas = [Q1, Q2, Q3, Q4, Q5, Q6, Q7]
-
-
-    # Ejecutamos los comandos y mostramos los resultados
-    
-    print("\nComandos:")
-    
-    Persona.db.create_index([('direccion', pymongo.GEOSPHERE)])    # Creamos el indice geoespacial para la consulta Q6 (si no lo creamos, la consulta no puede calcular la distancia)
-      
-    for consulta in consultas:
-        
-        print(f"\nQ{consultas.index(consulta) + 1}:")
-        
-        print(f"Comando: {consulta}")
-        print("Resultados: ")
-        
-        Qr = Persona.aggregate(consulta)
-        
-        numero_resultados = 0
-        
-        for resultado in Qr:
-            print(resultado)
-            numero_resultados += 1
-            
-        print(f"Total: {numero_resultados} resultados")
-
-if __name__ == "__main__":
-    
-    initApp()
-    r.flushall()
-
-    modelo = MiModelo(nombre="Alex", apellido="gomez", edad="20")
-    modelo.save()                                                                       #Primero salvamos y vemos que añade en la caché
-
-    print("Contenido de caché:" , r.get(str(modelo.__dict__.get('_id'))))               #Comrpobamos que se almacenó en caché
-
-    print("Buscado mediante id: " , modelo.find_by_id(str(modelo.__dict__.get('_id'))))   #Buscamos por id el modelo
-
-    print("Borramos la caché a proposito para comprobar otra funcionalidad de find_by_id")
-    print("Caché borrada: ", r.delete(str(modelo.__dict__.get('_id'))))                  #La borramos de la caché para que el find_by_id la busque en mongo y luego la vuelva a subir a la caché
-
-    print("Buscado mediante id:" , modelo.find_by_id(str(modelo.__dict__.get('_id'))))
-    modelo.delete()                                                                      #Borramos el modelo para que se borre de la caché también
-    print("Buscado mediante id:" , modelo.find_by_id(str(modelo.__dict__.get('_id'))))   #Comprobamos que si no está ni en caché ni en mongo, devuelve None
