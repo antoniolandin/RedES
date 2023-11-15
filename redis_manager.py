@@ -40,8 +40,7 @@ class RedisManager():
         if not self.db.hexists("usuarios", nombre_usuario):
             print("El usuario no existe")
             return -1
-        
-        
+         
         user_info = pickle.loads(self.db.hget("usuarios", nombre_usuario))
         
         if user_info["contraseña"] == contraseña:
@@ -101,6 +100,45 @@ class RedisManager():
         else:
             raise("El usuario no existe")
         
+    # Funciones Help Desk
+    
+    # Función de petición de ayuda con prioridad
+    def create_ticket(self, nombre_usuario, titulo, descripcion, prioridad):
+        if(self.db.hexists("usuarios", nombre_usuario)): # Ver si existe el usuario
+            ticket_info = {"titulo": titulo, "descripcion": descripcion, "usuario": nombre_usuario}
+            
+            self.db.zadd("tickets", {pickle.dumps(ticket_info): prioridad})
+            
+            print("Ticket creado correctamente")
+        else:
+            raise("El usuario no existe")
+
+    # Función de atención a usuarios
+    def attend_ticket(self):
+        
+        # Si no hay tickets se queda en espera
+        
+        if(self.db.zcard("tickets") == 0):
+            print("No quedan tickets por atender, esperando...")
+
+            while(self.db.zcard("tickets") == 0):
+                pass
+        
+        # Se atienden primero los tickets con mayor valor de prioridad
+
+        ticket = self.db.zrevrange("tickets", 0, 0)[0]
+                
+        ticket = pickle.loads(ticket)
+        
+        self.db.zrem("tickets", pickle.dumps(ticket))
+                
+        id_usuario = ticket["usuario"]
+        
+        print("Ticket:" + ticket["titulo"] + ", atendido correctamente")
+        
+        return id_usuario
+        
+        
     # Funciones extra    
     
     def get_user_info(self, nombre_usuario):
@@ -127,13 +165,14 @@ class RedisManager():
         else:
             raise("El usuario no existe")
         
-# Comprobar que todo funciona correctamente        
+# Test       
 
 manager = RedisManager()
 
 manager.db.flushall() # Borrar todos los datos de la base de datos
 
 manager.register("antonio", "Antonio Cabrera", "1234", 1) # Registrar un usuario
+print("Información de usuario: ", manager.get_user_info("antonio"))
 
 print("\nLogin con usuario y contraseña: ")
 
@@ -141,16 +180,38 @@ privilegios,token = manager.login_and_generate_token("antonio", "1234") # Logear
 
 print("Token: ", token)
 print("Privilegios: ", privilegios)
-
+print("Información de usuario: ", manager.get_user_info("antonio"))
 
 print("\nEditar privilegios del usuario: ")
 manager.edit_user_info("antonio", privilegios=2) # Editar privilegios del usuario
+print("Información de usuario: ", manager.get_user_info("antonio"))
 
 print("\nLogin con token: ")
 
 privilegios = manager.login_with_token(token) # Logearse con el token
 
 print("Privilegios: ", privilegios)
+print("Información de usuario: ", manager.get_user_info("antonio"))
 
 print("\nCerrar sesión: ")
 manager.logout(token) # Cerrar sesión
+
+# Help Desk
+
+print("\nHelp Desk: ")
+
+manager.register("juan", "Juan Pérez", "1234", 2) # Registrar un usuario
+
+print("\nCrear tickets: ")
+
+manager.create_ticket("antonio", "No funciona el ordenador", "No enciende", 1) # Crear ticket
+manager.create_ticket("juan", "Redis no funciona", "No se puede conectar", 3) # Crear ticket
+manager.create_ticket("antonio", "No va el internet", "No hay internet", 2) # Crear ticket
+
+print("\nAtender tickets: ")
+
+for i in range(3):
+    print("Usuario del ticket: " + manager.attend_ticket()) # Atender ticket
+
+print("\nAtender ticket sin tickets: ")
+manager.attend_ticket() # Atender ticket sin tickets
