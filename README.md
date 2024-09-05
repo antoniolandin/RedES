@@ -1,3 +1,3 @@
 # Práctica Bases de Datos
 
-Práctica de la asignatura de Bases de Datos que se va actualizando cada vez que hacemos una práctica de un tema nuevo
+Herramientas en python para interactuar con las bases de datos de [MongoDB](https://www.mongodb.com/) y [redis](https://redis.io/)
